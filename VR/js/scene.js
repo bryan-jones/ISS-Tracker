@@ -247,7 +247,7 @@ function onWindowResize() {
  */
 function update() {
   camera.updateProjectionMatrix();
-  //controls.update();
+  controls.update();
   sphere.rotation.y += 0.00025;
   sphereCloud.rotation.y += 0.0005;
 
