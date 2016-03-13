@@ -11,7 +11,7 @@
 /**
  * Define constants.
  */
-const TEXTURE_PATH = './assets/textures/';
+const TEXTURE_PATH = '../assets/textures/';
 
 /**
  * Create the animation request.
@@ -82,6 +82,11 @@ function init() {
   renderer.setSize( window.innerWidth, window.innerHeight );
   renderer.shadowMap.enabled;
   container.appendChild( element );
+
+  // Add the VR screen effect.
+  effect = new THREE.StereoEffect( renderer );
+  effect.setSize( window.innerWidth, window.innerHeight );
+  effect.separation = 0;
 
   // Build the controls.
   controls = new THREE.OrbitControls( camera, element );
@@ -162,7 +167,7 @@ function init() {
   var geometryCloud = new THREE.SphereGeometry( earthRadius + 1, 64, 64 );
 
   loader = new THREE.TextureLoader();
-  var alpha = loader.load( "./assets/textures/earth/alphaMap.jpg" );
+  var alpha = loader.load( "../assets/textures/earth/alphaMap.jpg" );
   alpha.anisotropy = renderer.getMaxAnisotropy();
   alpha.wrapS = alpha.wrapT = THREE.RepeatWrapping;
   alpha.repeat.set( 1, 1 );
@@ -179,7 +184,7 @@ function init() {
 
   // Create glow effect. I got this from http://stemkoski.github.io/Three.js/Simple-Glow.html.
   var spriteMaterial = new THREE.SpriteMaterial({
-    map: new THREE.ImageUtils.loadTexture( './assets/textures/earth/glow.png' ),
+    map: new THREE.ImageUtils.loadTexture( '../assets/textures/earth/glow.png' ),
     color: 0x0099ff,
     transparent: false,
     blending: THREE.AdditiveBlending
@@ -188,15 +193,8 @@ function init() {
   sprite.scale.set(earthRadius * 2.5, earthRadius * 2.5, 1.0);
   sphereCloud.add(sprite);
 
-
-
-
-
-
-
-
   // Add the skymap.
-  var urlPrefix = "./assets/skymap/";
+  var urlPrefix = "../assets/skymap/";
   var urls = [
     urlPrefix + 'top.jpg', // right
     urlPrefix + 'bottom.jpg', // left
@@ -230,25 +228,6 @@ function init() {
 
   scene.add(skybox);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   document.body.appendChild( stats.domElement );
 
   window.addEventListener('resize', onWindowResize, false);
@@ -260,7 +239,7 @@ function init() {
 function onWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  effect.setSize(window.innerWidth, window.innerHeight);
 }
 
 /**
@@ -278,7 +257,7 @@ function update() {
  * Render the scene.
  */
 function render() {
-  renderer.render(scene, camera);
+  effect.render(scene, camera);
 }
 
 /**
