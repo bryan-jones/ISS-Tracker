@@ -29,6 +29,7 @@ if (!window.requestAnimationFrame) {
   })();
 }
 
+
 /**
  * Set our global variables.
  */
@@ -41,9 +42,71 @@ var camera,
     container,
     sphere,
     sphereCloud,
-    rotationPoint;
+    rotationPoint,
+    iss;
+var degreeOffset = 90;
+var issX = issY = 0;
 var stats = new Stats();
 var earthRadius = 80;
+
+var getEarthRotation = function() {
+  // Get the current time.
+  var d = new Date();
+  var h = d.getUTCHours();
+  var m = d.getUTCMinutes();
+
+  // Calculate total minutes.
+  var minutes = h * 60;
+  minutes += m;
+
+  // Turn minutes into degrees.
+  degrees = minutes/3.9907;
+
+  // Add an offset to match UTC time.
+  degrees += degreeOffset;
+  return degrees;
+}
+
+var degrees = getEarthRotation();
+
+// Grab ISS position.
+setInterval(function() {
+  $.getJSON("http://api.open-notify.org/iss-now.json?callback=?", function( result ) {
+    if (result.iss_position.latitude < 0) {
+      issX = result.iss_position.latitude;
+    } else {
+      issX = -1 *result.iss_position.latitude;
+    }
+
+    if (result.iss_position.longitude < 0) {
+      issY = 360 + result.iss_position.longitude;
+    } else {
+      issY = result.iss_position.longitude;
+    }
+
+    // Convert the degrees to radians.
+    issY = issY * (Math.PI/180);
+    issX = issX * (Math.PI/180);
+  });
+}, 1000);
+
+// Calculate Earth's rotation position.
+setInterval(function() {
+  // Get the current time.
+  var d = new Date();
+  var h = d.getUTCHours();
+  var m = d.getUTCMinutes();
+
+  // Calculate total minutes.
+  var minutes = h * 60;
+  minutes += m;
+
+  // Turn minutes into degrees.
+  degrees = minutes/3.9907;
+
+  // Add an offset to match UTC time.
+  degrees += degreeOffset;
+}, 60000);
 
 init();
 animate();
@@ -60,12 +123,18 @@ function init() {
   scene = new THREE.Scene();
 
   // Create a rotation point.
-  rotationPoint = new THREE.Object3D();
+  worldRotationPoint = new THREE.Object3D();
+  worldRotationPoint.position.set( 0, 0, 0 );
+  scene.add( worldRotationPoint );
 
   rotationPoint = new THREE.Object3D();
-  rotationPoint.position.set(0, 0, 350);
+  rotationPoint.position.set( 0, 0, 350 );
   scene.add( rotationPoint );
 
+  // Create the ISS rotation point.
+  issRotationPoint = new THREE.Object3D();
+  issRotationPoint.position.set( 0, 0, 0 );
+  worldRotationPoint.add( issRotationPoint );
 
   // Create the camera.
   camera = new THREE.PerspectiveCamera(
@@ -94,21 +163,38 @@ function init() {
      return;
     }
 
-    controls = new THREE.DeviceOrientationControls(camera);
+    controls = new THREE.DeviceOrientationControls( camera );
     controls.connect();
 
     window.removeEventListener('deviceorientation', setOrientationControls, true);
   }
   window.addEventListener('deviceorientation', setOrientationControls, true);
 
-  // Lights
-  var ambient = new THREE.AmbientLight( 0x222222 ); // soft white light
+  // Ambient lights
+  var ambient = new THREE.AmbientLight( 0x222222 );
   scene.add( ambient );
 
-  // Room Lights.
-  var light = new THREE.PointLight( 0xffeecc, 3, 5000 );
+  // The sun.
+  var light = new THREE.PointLight( 0xffeecc, 1, 5000 );
   light.position.set( -400, 0, 100 );
   scene.add( light );
+
+  // Since the sun is much bigger than a point of light, add four fillers.
+  var light2 = new THREE.PointLight( 0xffffff, 0.6, 4000 );
+  light2.position.set( -400, 0, 250 );
+  scene.add( light2 );
+
+  var light3 = new THREE.PointLight( 0xffffff, 0.6, 4000 );
+  light3.position.set( -400, 0, -150 );
+  scene.add( light3 );
+
+  var light4 = new THREE.PointLight( 0xffffff, 0.6, 4000 );
+  light4.position.set( -400, 150, 100 );
+  scene.add( light4 );
+
+  var light5 = new THREE.PointLight( 0xffffff, 0.6, 4000 );
+  light5.position.set( -400, -150, 100 );
+  scene.add( light5 );
 
   // Show FPS
   stats.setMode( 0 ); // 0: fps, 1: ms, 2: mb
@@ -119,7 +205,7 @@ function init() {
   stats.domElement.style.top = '0';
 
   // Add the Earth sphere model.
-  var geometry = new THREE.SphereGeometry( earthRadius, 64, 64 );
+  var geometry = new THREE.SphereGeometry( earthRadius, 128, 128 );
 
   // Create the Earth materials.
   var materialJSON;
@@ -128,21 +214,12 @@ function init() {
 
     loader = new THREE.TextureLoader();
     var texture = loader.load( materialJSON.image );
-    texture.anisotropy = renderer.getMaxAnisotropy();
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set( materialJSON.sizeX, materialJSON.sizeY );
 
     var bump = null;
     bump = loader.load( materialJSON.bump );
-    bump.anisotropy = renderer.getMaxAnisotropy();
-    bump.wrapS = bump.wrapT = THREE.RepeatWrapping;
-    bump.repeat.set( materialJSON.sizeX, materialJSON.sizeY );
 
     var spec = null;
     spec = loader.load( materialJSON.spec );
-    spec.anisotropy = renderer.getMaxAnisotropy();
-    spec.wrapS = spec.wrapT = THREE.RepeatWrapping;
-    spec.repeat.set( materialJSON.sizeX, materialJSON.sizeY );
 
     var material = new THREE.MeshPhongMaterial({
       color: materialJSON.color,
@@ -154,18 +231,21 @@ function init() {
     });
 
     sphere = new THREE.Mesh( geometry, material );
-    sphere.position.set(0, 0, 0);
-    scene.add( sphere );
+    sphere.position.set( 0, 0, 0 );
+    sphere.rotation.y = Math.PI;
+
+    // Focus initially on the prime meridian.
+    sphere.rotation.y = -1 * (8.7 * Math.PI / 17);
+
+    // Add the Earth to the scene.
+    worldRotationPoint.add( sphere );
   });
 
   // Add the Earth sphere model.
-  var geometryCloud = new THREE.SphereGeometry( earthRadius + 1, 64, 64 );
+  var geometryCloud = new THREE.SphereGeometry( earthRadius + 0.2, 128, 128 );
 
   loader = new THREE.TextureLoader();
   var alpha = loader.load( "./assets/textures/earth/alphaMap.jpg" );
-  alpha.anisotropy = renderer.getMaxAnisotropy();
-  alpha.wrapS = alpha.wrapT = THREE.RepeatWrapping;
-  alpha.repeat.set( 1, 1 );
 
   var materialCloud = new THREE.MeshPhongMaterial({
     alphaMap: alpha,
@@ -174,7 +254,6 @@ function init() {
   materialCloud.transparent = true;
 
   sphereCloud = new THREE.Mesh( geometryCloud, materialCloud );
-  sphereCloud.position.set( 0, 0, 0 );
   scene.add( sphereCloud );
 
   // Create glow effect. I got this from http://stemkoski.github.io/Three.js/Simple-Glow.html.
@@ -185,15 +264,18 @@ function init() {
     blending: THREE.AdditiveBlending
   });
   var sprite = new THREE.Sprite( spriteMaterial );
-  sprite.scale.set(earthRadius * 2.5, earthRadius * 2.5, 1.0);
+  sprite.scale.set( earthRadius * 2.5, earthRadius * 2.5, 1.0);
   sphereCloud.add(sprite);
 
 
-
-
-
-
-
+  // Add the ISS.
+  var issGeometry = new THREE.SphereGeometry( 2, 8, 8 );
+  var issMaterial = new THREE.MeshLambertMaterial({
+    color: 0xff0000
+  });
+  iss = new THREE.Mesh( issGeometry, issMaterial );
+  iss.position.set( 0, 0, earthRadius + 10 );
+  issRotationPoint.add(iss);
 
   // Add the skymap.
   var urlPrefix = "./assets/skymap/";
@@ -207,7 +289,7 @@ function init() {
 
   ];
 
-  var cubemap = THREE.ImageUtils.loadTextureCube(urls); // load textures
+  var cubemap = THREE.ImageUtils.loadTextureCube( urls ); // load textures
   cubemap.format = THREE.RGBFormat;
 
   var shader = THREE.ShaderLib['cube']; // init cube shader from built-in lib
@@ -224,33 +306,13 @@ function init() {
 
   // create skybox mesh
   var skybox = new THREE.Mesh(
-    new THREE.CubeGeometry(2000, 1000, 1000),
+    new THREE.CubeGeometry( 2000, 1000, 1000 ),
     skyBoxMaterial
   );
 
   scene.add(skybox);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   document.body.appendChild( stats.domElement );
-
   window.addEventListener('resize', onWindowResize, false);
 }
 
@@ -268,10 +330,11 @@ function onWindowResize() {
  */
 function update() {
   camera.updateProjectionMatrix();
-  //controls.update();
-  sphere.rotation.y += 0.00025;
-  sphereCloud.rotation.y += 0.0005;
+  worldRotationPoint.rotation.y = degrees * Math.PI/180;
+  sphereCloud.rotation.y += 0.00025;
 
+  issRotationPoint.rotation.y = issY;
+  issRotationPoint.rotation.x = issX;
 }
 
 /**
@@ -294,7 +357,7 @@ function animate() {
 
 function loadJSON(file, callback) {
   var xobj = new XMLHttpRequest();
-  xobj.overrideMimeType("application/json");
+  xobj.overrideMimeType("application/jsonp");
   xobj.open('GET', file, true);
   xobj.onreadystatechange = function () {
     if (xobj.readyState == 4 && xobj.status == "200") {
