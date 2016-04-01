@@ -67,7 +67,28 @@ var getEarthRotation = function() {
   return degrees;
 }
 
+// Set the initial ISS position.
+var setISSPosition = function() {
+  $.getJSON("http://api.open-notify.org/iss-now.json?callback=?", function( result ) {
+
+    // Set the latitude position.
+    issXX = issRadius * Math.cos(result.iss_position.latitude * Math.PI/180);
+    issXY = issRadius * Math.sin(result.iss_position.latitude * Math.PI/180);
+
+    // Set the longitude position.
+    if (result.iss_position.longitude < 0) {
+      issY = 360 + result.iss_position.longitude;
+    } else {
+      issY = result.iss_position.longitude;
+    }
+
+    // Convert the degrees to radians.
+    issY = issY * (Math.PI/180);
+  });
+}
+
 var degrees = getEarthRotation();
+setISSPosition();
 
 // Calculate Earth's rotation position.
 setInterval(function() {
