@@ -29,7 +29,6 @@ if (!window.requestAnimationFrame) {
   })();
 }
 
-
 /**
  * Set our global variables.
  */
@@ -45,9 +44,10 @@ var camera,
     rotationPoint,
     iss;
 var degreeOffset = 90;
-var issX = issY = 0;
+var issXX = issXY = issY = 0;
 var stats = new Stats();
 var earthRadius = 80;
+var issRadius = earthRadius + 10;
 
 var getEarthRotation = function() {
   // Get the current time.
@@ -68,27 +68,6 @@ var getEarthRotation = function() {
 }
 
 var degrees = getEarthRotation();
-
-// Grab ISS position.
-setInterval(function() {
-  $.getJSON("http://api.open-notify.org/iss-now.json?callback=?", function( result ) {
-    if (result.iss_position.latitude < 0) {
-      issX = result.iss_position.latitude;
-    } else {
-      issX = -1 *result.iss_position.latitude;
-    }
-
-    if (result.iss_position.longitude < 0) {
-      issY = 360 + result.iss_position.longitude;
-    } else {
-      issY = result.iss_position.longitude;
-    }
-
-    // Convert the degrees to radians.
-    issY = issY * (Math.PI/180);
-    issX = issX * (Math.PI/180);
-  });
-}, 1000);
 
 // Calculate Earth's rotation position.
 setInterval(function() {
@@ -132,9 +111,14 @@ function init() {
   scene.add( rotationPoint );
 
   // Create the ISS rotation point.
+  issRotationPointX = new THREE.Object3D();
+  issRotationPointX.position.set( 0, 0, 0 );
+  issRotationPointX.rotation.y = -1 * ( 95 * Math.PI/180 );
+  worldRotationPoint.add( issRotationPointX );
+
   issRotationPoint = new THREE.Object3D();
   issRotationPoint.position.set( 0, 0, 0 );
-  worldRotationPoint.add( issRotationPoint );
+  issRotationPointX.add( issRotationPoint );
 
   // Create the camera.
   camera = new THREE.PerspectiveCamera(
@@ -154,8 +138,8 @@ function init() {
 
   // Build the controls.
   controls = new THREE.OrbitControls( camera, element );
-  controls.enablePan = false;
-  controls.enableZoom = false;
+  controls.enablePan = true; //false;
+  controls.enableZoom = true; //false;
   controls.target.copy( new THREE.Vector3( 0, 0, -350 ));
 
   function setOrientationControls(e) {
@@ -274,7 +258,7 @@ function init() {
     color: 0xff0000
   });
   iss = new THREE.Mesh( issGeometry, issMaterial );
-  iss.position.set( 0, 0, earthRadius + 10 );
+  iss.position.set( 0, 0, issRadius );
   issRotationPoint.add(iss);
 
   // Add the skymap.
@@ -333,8 +317,8 @@ function update() {
   worldRotationPoint.rotation.y = degrees * Math.PI/180;
   sphereCloud.rotation.y += 0.00025;
 
+  iss.position.set(issXX, issXY, 0);
   issRotationPoint.rotation.y = issY;
-  issRotationPoint.rotation.x = issX;
 }
 
 /**
@@ -368,3 +352,24 @@ function loadJSON(file, callback) {
   };
   xobj.send(null);
 }
+
+// Grab ISS position.
+setInterval(function() {
+  $.getJSON("http://api.open-notify.org/iss-now.json?callback=?", function( result ) {
+
+    // Set the latitude position.
+    issXX = issRadius * Math.cos(result.iss_position.latitude * Math.PI/180);
+    issXY = issRadius * Math.sin(result.iss_position.latitude * Math.PI/180);
+
+    // Set the longitude position.
+    if (result.iss_position.longitude < 0) {
+      issY = 360 + result.iss_position.longitude;
+    } else {
+      issY = result.iss_position.longitude;
+    }
+
+    // Convert the degrees to radians.
+    issY = issY * (Math.PI/180);
+  });
+}, 3000);
+
