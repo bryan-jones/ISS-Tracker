@@ -138,8 +138,8 @@ function init() {
 
   // Build the controls.
   controls = new THREE.OrbitControls( camera, element );
-  controls.enablePan = true; //false;
-  controls.enableZoom = true; //false;
+  controls.enablePan = false;
+  controls.enableZoom = false;
   controls.target.copy( new THREE.Vector3( 0, 0, -350 ));
 
   function setOrientationControls(e) {
