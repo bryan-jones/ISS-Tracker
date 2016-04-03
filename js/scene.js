@@ -47,7 +47,7 @@ var degreeOffset = 90;
 var issXX = issXY = issY = 0;
 var stats = new Stats();
 var earthRadius = 80;
-var issRadius = earthRadius + 10;
+var issRadius = earthRadius + 20;
 
 var getEarthRotation = function() {
   // Get the current time.
@@ -128,7 +128,7 @@ function init() {
   scene.add( worldRotationPoint );
 
   rotationPoint = new THREE.Object3D();
-  rotationPoint.position.set( 0, 0, 350 );
+  rotationPoint.position.set( 0, 0, earthRadius * 4 );
   scene.add( rotationPoint );
 
   // Create the ISS rotation point.
@@ -159,9 +159,11 @@ function init() {
 
   // Build the controls.
   controls = new THREE.OrbitControls( camera, element );
-  controls.enablePan = false;
-  controls.enableZoom = false;
-  controls.target.copy( new THREE.Vector3( 0, 0, -350 ));
+  controls.enablePan = true; //false;
+  controls.enableZoom = true; //false;
+  controls.minDistance = issRadius + 10;
+  controls.maxDistance = earthRadius * 8;
+  controls.target.copy( new THREE.Vector3( 0, 0, -1 * earthRadius * 4 ));
 
   function setOrientationControls(e) {
     if (!e.alpha) {
@@ -272,7 +274,6 @@ function init() {
   sprite.scale.set( earthRadius * 2.5, earthRadius * 2.5, 1.0);
   sphereCloud.add(sprite);
 
-
   // Add the ISS.
   var issGeometry = new THREE.SphereGeometry( 2, 8, 8 );
   var issMaterial = new THREE.MeshLambertMaterial({
@@ -282,15 +283,20 @@ function init() {
   iss.position.set( 0, 0, issRadius );
   issRotationPoint.add(iss);
 
+  // Create a spot light and attach it to the station.
+  var spotLight = new THREE.SpotLight( 0xffffff, 1, 100, 3 * Math.PI/2);
+  spotLight.position.set( 0, 0, 0 );
+  iss.add( spotLight );
+
   // Add the skymap.
   var urlPrefix = "./assets/skymap/";
   var urls = [
-    urlPrefix + 'top.jpg', // right
-    urlPrefix + 'bottom.jpg', // left
-    urlPrefix + 'left.jpg', // top
-    urlPrefix + 'right.jpg', // bottom
-    urlPrefix + 'front.jpg', // front
-    urlPrefix + 'back.jpg', // back
+    urlPrefix + 'test.jpg', //'top.jpg', // top
+    urlPrefix + 'test.jpg', //'bottom.jpg', // bottom
+    urlPrefix + 'test.jpg', //'left.jpg', // left
+    urlPrefix + 'test.jpg', //'right.jpg', // right
+    urlPrefix + 'test.jpg', //'front.jpg', // front
+    urlPrefix + 'test.jpg', //'back.jpg', // back
 
   ];
 
@@ -311,7 +317,7 @@ function init() {
 
   // create skybox mesh
   var skybox = new THREE.Mesh(
-    new THREE.CubeGeometry( 2000, 1000, 1000 ),
+    new THREE.CubeGeometry( 2000, 2000, 2000 ),
     skyBoxMaterial
   );
 
